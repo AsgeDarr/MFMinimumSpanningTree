@@ -3,48 +3,122 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.stream.IntStream;
 
 public class MFMST {
 
 	static int[][] spanningTree; 
 	static int vertices; 
 	static int edges;
-	
-	
-	public static void main(String [] args) throws IOException {
-		int B = 4;
-		ReadTestFile();
-		int[] chosenEdges = randomizedEdges();
+	static int[][][] listOfSpanningTrees;
+	static int B = 1000000000;
 
-		System.out.println(Check(chosenEdges, B));
+	public static void main(String [] args) throws IOException {
+		ReadTestFile();	
+		int[] chosenEdges;
+		int[][] res = CalcMST(spanningTree);
+
+		for(int add = 0; add< 3;add++) {
+			long start = System.currentTimeMillis();
+			int times = 0;
+			B = 1000000000;
+			do {
+				chosenEdges = randomizedEdges(res.length+add);
+				Check(chosenEdges);
+				times++;
+				//System.out.println(Check(chosenEdges, B));
+			}while(times < 300);
+			long end   = System.currentTimeMillis();
+			//System.out.println("Chosen edges:");
+			//for(int i = 0; i<chosenEdges.length;i++) 
+			//	System.out.print(chosenEdges[i] + " ");
+			long total = end - start;
+			System.out.println("\nBest B found with "+(res.length+add) +" edges chosen: " + B + "  -  milliseconds: " + total);
+		}
 	}
 
 	//Chose the egdes for check. This has to be clever and random
-	public static int[] randomizedEdges() {
-		int[] edges;
+	public static int[] randomizedEdges(int MSTVertices) {
+		int[] chosenEdges = new int[edges];
+		Random random = new Random();
 
-		edges = new int[] {1,0,1};
+		do {
+			for(int i = 0; i <  chosenEdges.length; i++) {
+				if(random.nextBoolean()) {
+					chosenEdges[i] = 1;
+				}else {
+					chosenEdges[i] = 0;
+				}
 
-		return edges;
+				//System.out.print(chosenEdges[i] + "  ");
+			}
+			//System.out.println();
+
+		}while(IntStream.of(chosenEdges).sum() !=MSTVertices);
+		return chosenEdges;
+	}
+
+
+
+
+	public static int[][] CalcMST(int[][] P) {
+		int[][] MST = P;
+		int[][] result = new int[spanningTree.length][3]; 
+		int e = 0;
+		int i = 0;  
+		bubbleSort(MST);
+		subset subsets[] = new subset[MST.length];
+		for(i=0; i<MST.length; ++i)
+			subsets[i]= new subset();
+		for (int j = 0; j < MST.length; j++)
+		{
+			subsets[j].parent = j;
+			subsets[j].rank = 0;
+		}
+		i = -1; 
+		while (i < MST.length-1)
+		{
+			int [] nextEdge = new int[3];
+			i++;
+			nextEdge[0] = MST[i][0];
+			nextEdge[1] = MST[i][1];
+			nextEdge[2] = MST[i][2];
+			int x = find(subsets, nextEdge[0]-1);
+			int y = find(subsets, nextEdge[1]-1);
+			if (x != y)
+			{
+				result[e++] = nextEdge;
+				Union(subsets, x, y);
+			}
+		}
+		System.out.println("MST:");
+		int[][] cropRes = new int[e][3];
+		for (i = 0; i < e; i++) {
+			System.out.println(result[i][0]+" -- " + result[i][1]+" == " + result[i][2]);
+			cropRes[i][0] = result[i][0];
+			cropRes[i][1] = result[i][1];
+			cropRes[i][2] = result[i][2];
+		}	
+		return cropRes;
 	}
 
 	//Checks if there exists an MFMST
-	public static String Check(int[] chosenEdges, int B) {
-		if(!CheckEveryVerticesExists(chosenEdges)) {
+	public static String Check(int[] chosenEdges) {
+		/*if(!CheckEveryVerticesExists(chosenEdges)) {
+			return "NO - Not every vertices exists";
+		}*/
+		if(!CheckMaxCriteria(chosenEdges)) {
 			return "NO";
 		}
-		if(!CheckMaxCriteria(chosenEdges,B)) {
-			return "NO";
-		}
-		
+
 		return "YES";
 	}
 
-	public static boolean CheckMaxCriteria(int[] chosenEdges,int B) {
+	public static boolean CheckMaxCriteria(int[] chosenEdges) {
 		int firstSum = 0;
 		int secondSum = 0;
-		
 		for(int i = 0; i < spanningTree.length; i++) {
 			if(chosenEdges[i] == 1) {
 				firstSum += spanningTree[i][2];
@@ -52,18 +126,16 @@ public class MFMST {
 			}
 		}
 		
-		
-		System.out.println("Max( " + firstSum + " , " + secondSum + " ) <= "+ B);
-		
 		if( Math.max(firstSum,secondSum) <= B ) {
+			B = Math.max(firstSum,secondSum);
 			return true;
 		}else {
 			return false;
 		}
-		
+
 	}
-	
-	
+
+
 	//chosenEdges contains a list of chosen vertices where the index represent the edge in the matrix. 
 	//1 if chosen, 0 if not chosen
 	public static boolean CheckEveryVerticesExists(int[] chosenEdges) {
@@ -86,7 +158,12 @@ public class MFMST {
 		}
 	}
 
-
+	static int find(subset subsets[], int i)
+	{
+		if (subsets[i].parent != i)
+			subsets[i].parent = find(subsets, subsets[i].parent);
+		return subsets[i].parent;
+	}
 
 
 	@SuppressWarnings("resource")
@@ -98,7 +175,7 @@ public class MFMST {
 		if(!filepath.contains(".uwg")) {
 			filepath = "src/" + filepath + ".uwg";
 		}
-		filepath = filepath.toLowerCase();
+		//filepath = filepath.toLowerCase();
 		System.out.println("The filename path is : " + filepath);
 
 		//Loads .uwg-file into matrix
@@ -143,13 +220,56 @@ public class MFMST {
 			assert testFileReader != null;
 			testFileReader.close();
 		}
-		for(int i = 0; i<spanningTree.length;i++) {
-			for(int j = 0; j< 3; j++) {
-				System.out.print(spanningTree[i][j] + " ");
-			}
-			System.out.println();
-		}
 
 	}
 
+
+	static void Union(subset subsets[], int x, int y)
+	{
+		int xroot = find(subsets, x);
+		int yroot = find(subsets, y);
+
+		if (subsets[xroot].rank < subsets[yroot].rank)
+		{
+			subsets[xroot].parent = yroot;
+		}else if (subsets[xroot].rank > subsets[yroot].rank)
+		{
+			subsets[yroot].parent = xroot;
+		}else
+		{
+			subsets[yroot].parent = xroot;
+			subsets[xroot].rank++;
+		}
+	}
+
+	public static void bubbleSort(int[][] array) {
+		boolean swapped = true;
+		int j = 0;
+		int[] temp = new int[3];
+		while (swapped) {
+			swapped = false;
+			j++;
+			for (int i = 0; i < array.length - j; i++) {
+				if (array[i][2] > array[i + 1][2]) {
+					temp[0] = array[i][0];
+					temp[1] = array[i][1];
+					temp[2] = array[i][2];
+					array[i][0] = array[i + 1][0];
+					array[i][1] = array[i + 1][1];
+					array[i][2] = array[i + 1][2];
+					array[i + 1][0] = temp[0];
+					array[i + 1][1] = temp[1];
+					array[i + 1][2] = temp[2];
+					swapped = true;
+				}
+			}
+		}
+	}
+
 }
+
+
+class subset
+{
+	int parent, rank;
+};
