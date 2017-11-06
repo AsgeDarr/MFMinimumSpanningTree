@@ -14,7 +14,8 @@ public class MFMST {
 	static int edges;
 	static int[][][] listOfSpanningTrees;
 	static int B = 1000000000;
-
+	static int[] MFMST;
+			
 	public static void main(String [] args) throws IOException {
 		ReadTestFile();	
 		int[] chosenEdges;
@@ -36,6 +37,9 @@ public class MFMST {
 			//	System.out.print(chosenEdges[i] + " ");
 			long total = end - start;
 			System.out.println("\nBest B found with "+(res.length+add) +" edges chosen: " + B + "  -  milliseconds: " + total);
+			System.out.print("Tree: ");
+			for(int i = 0; i< MFMST.length; i++)
+				System.out.print(MFMST[i] + " ");
 		}
 	}
 
@@ -127,6 +131,7 @@ public class MFMST {
 		}
 		
 		if( Math.max(firstSum,secondSum) <= B ) {
+			MFMST = chosenEdges;
 			B = Math.max(firstSum,secondSum);
 			return true;
 		}else {
@@ -192,7 +197,7 @@ public class MFMST {
 		int rows = 0;
 		while (rowCounter.readLine() != null) rows++;
 		rowCounter.close();
-		System.out.println("Rows of matrix: " + (rows-2) + "\n");
+		System.out.println("Number of vertices: " + (rows-2) + "\n");
 		//Create matrix for the tree
 		spanningTree = new int[rows-2][3]; 
 		//Load data into matrix
